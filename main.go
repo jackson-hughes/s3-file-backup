@@ -1,13 +1,14 @@
 /*
 mvp needs:
 takes input for filename / pattern
+validate input
 todo: takes input for destination bucket
 
 nice to haves:
-boolean for delete from disk after backup
-compress prior to upload if not already compressed
-sends event to Cloud watch events with exit status (success, error)
-no-op / dry run mode - logs what would have happened
+todo: boolean for delete from disk after backup
+todo: compress prior to upload if not already compressed
+todo: sends event to Cloud watch events with exit status (success, error)
+todo: no-op / dry run mode - logs what would have happened
 */
 
 package main
@@ -71,7 +72,6 @@ func checkFlags() {
 	if len(backupBucket) == 0 {
 		log.Fatalln("No S3 bucket provided. Please provide the name of a target S3 bucket with -backup-bucket / -b")
 	}
-
 }
 
 func uploadToS3() {
