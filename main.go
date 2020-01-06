@@ -7,6 +7,7 @@ nice to haves:
 boolean for delete from disk after backup
 compress prior to upload if not already compressed
 sends event to Cloud watch events with exit status (success, error)
+no-op / dry run mode - logs what would have happened
 */
 
 package main
