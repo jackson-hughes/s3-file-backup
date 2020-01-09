@@ -36,6 +36,7 @@ var (
 	loglevel      string
 	backupBucket  string
 	profileMemory bool
+	objectPrefix  string
 )
 
 func main() {
@@ -45,8 +46,14 @@ func main() {
 	flag.StringVar(&loglevel, "l", "info", "Short flag - set log level")
 	flag.StringVar(&backupBucket, "backup-bucket", "", "Specify S3 bucket to copy file to")
 	flag.StringVar(&backupBucket, "b", "", "Short flag - specify S3 bucket to copy file to")
+	flag.StringVar(&objectPrefix, "object-prefix", "", "Prefix for S3 object uploads")
+	flag.StringVar(&objectPrefix, "o", "", "Short flag - prefix for S3 object uploads")
 	flag.BoolVar(&profileMemory, "profile-mem", false, "Enable memory profiling")
 	flag.Parse()
+	if flag.NFlag() == 0 {
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
 
 	if profileMemory {
 		defer profile.Start(profile.MemProfile).Stop()
@@ -105,6 +112,14 @@ func checkFlags() error {
 	return nil
 }
 
+func findFile(pattern string) (match []string, err error) {
+	fileMatches, err := filepath.Glob(pattern)
+	if err != nil {
+		return nil, error(err)
+	}
+	return fileMatches, nil
+}
+
 func uploadToS3(f string, s client.ConfigProvider) (err error) {
 	file, err := os.Open(f)
 	if err != nil {
@@ -116,7 +131,7 @@ func uploadToS3(f string, s client.ConfigProvider) (err error) {
 	log.Debugf("Starting upload of file: ", f)
 	r, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(backupBucket),
-		Key:    aws.String(filepath.Base(f)),
+		Key:    aws.String(objectPrefix + filepath.Base(f)),
 		Body:   file,
 	})
 	if err != nil {
@@ -124,12 +139,4 @@ func uploadToS3(f string, s client.ConfigProvider) (err error) {
 	}
 	log.Infof("file successfully uploaded to, %s", r.Location)
 	return nil
-}
-
-func findFile(pattern string) (match []string, err error) {
-	fileMatches, err := filepath.Glob(pattern)
-	if err != nil {
-		return nil, error(err)
-	}
-	return fileMatches, nil
 }
