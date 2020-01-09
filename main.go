@@ -8,10 +8,10 @@ uploads file to bucket
 nice to haves:
 todo: boolean for delete from disk after backup
 todo: compress prior to upload if not already compressed
-todo: sends event to Cloud watch events with exit status (success, error)
+todo: publishes metric to cloud watch metrics
 todo: no-op / dry run mode - logs what would have happened
 todo: optionally prefix new s3 objects (e.g. today's date)
-todo: flag for profiling
+flag for profiling
 */
 
 package main
@@ -22,32 +22,35 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/aws/aws-sdk-go/aws/client"
-
 	"github.com/aws/aws-sdk-go/aws"
-
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/pkg/profile"
 
 	log "github.com/sirupsen/logrus"
 )
 
 var (
-	filepattern  string
-	loglevel     string
-	backupBucket string
+	filepattern   string
+	loglevel      string
+	backupBucket  string
+	profileMemory bool
 )
 
 func main() {
-	// defer profile.Start(profile.MemProfile).Stop()
 	flag.StringVar(&filepattern, "filepath", "", "Absolute path of file to be backed up")
 	flag.StringVar(&filepattern, "f", "", "Short flag - absolute path of file to be backed up")
 	flag.StringVar(&loglevel, "log-level", "info", "Set log level")
 	flag.StringVar(&loglevel, "l", "info", "Short flag - set log level")
 	flag.StringVar(&backupBucket, "backup-bucket", "", "Specify S3 bucket to copy file to")
 	flag.StringVar(&backupBucket, "b", "", "Short flag - specify S3 bucket to copy file to")
+	flag.BoolVar(&profileMemory, "profile-mem", false, "Enable memory profiling")
 	flag.Parse()
+
+	if profileMemory {
+		defer profile.Start(profile.MemProfile).Stop()
+	}
 
 	err := checkFlags()
 	if err != nil {
@@ -59,6 +62,9 @@ func main() {
 		log.Error(err)
 	}
 	log.SetLevel(ll)
+	log.SetFormatter(&log.TextFormatter{
+		DisableLevelTruncation: true,
+	})
 	log.SetOutput(os.Stdout)
 
 	files, err := findFile(filepattern)
