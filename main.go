@@ -1,19 +1,3 @@
-/*
-mvp needs:
-takes input for filename / pattern
-validate input
-takes input for destination bucket
-uploads file to bucket
-
-nice to haves:
-boolean for delete from disk after backup
-todo: compress prior to upload if not already compressed
-todo: publishes metric to cloud watch metrics
-todo: no-op / dry run mode - logs what would have happened
-optionally prefix new s3 objects (e.g. today's date)
-flag for profiling
-*/
-
 package main
 
 import (
@@ -21,10 +5,12 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"reflect"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pkg/profile"
 
@@ -32,14 +18,15 @@ import (
 )
 
 var (
-	gitCommit     string
-	gitUrl        string
-	filepattern   string
-	loglevel      string
-	backupBucket  string
-	profileMemory bool
-	objectPrefix  string
-	deleteFiles   bool
+	gitCommit        string
+	gitUrl           string
+	filepattern      string
+	loglevel         string
+	backupBucket     string
+	objectPrefix     string
+	cloudwatchMetric string
+	profileMemory    bool
+	deleteFiles      bool
 )
 
 func main() {
@@ -53,6 +40,7 @@ func main() {
 	flag.StringVar(&objectPrefix, "o", "", "Short flag - prefix for S3 object uploads")
 	flag.BoolVar(&profileMemory, "profile-mem", false, "Enable memory profiling")
 	flag.BoolVar(&deleteFiles, "delete", false, "Delete files from disk after upload")
+	flag.StringVar(&cloudwatchMetric, "cloudwatch-metric", "", "Cloudwatch metric to publish to")
 	flag.Parse()
 	if flag.NFlag() == 0 {
 		flag.PrintDefaults()
@@ -82,6 +70,10 @@ func main() {
 	log.Debugf("Go binary built from commit: %v ", gitCommit)
 	log.Debugf("The source code can be found here: %v ", gitUrl)
 
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState: session.SharedConfigEnable,
+	}))
+
 	files, err := findFile(filepattern)
 	if err != nil {
 		log.Error(err)
@@ -89,23 +81,47 @@ func main() {
 	if files != nil {
 		log.Debug("Found ", len(files), " files that matched provided pattern: ", files)
 	} else {
-		log.Fatalf("No files found matching pattern: %v", filepattern)
+		log.Errorf("No files found matching pattern: %v", filepattern)
+		if cloudwatchMetric != "" {
+			err := publishMetric(1, sess)
+			if err != nil {
+				log.Errorf("error publishing metric: %v", err)
+			}
+		}
 	}
 
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
-
+	var successList []string
 	for _, f := range files {
 		err := uploadToS3(f, sess)
-		if err == nil && deleteFiles {
-			err := os.Remove(f)
-			log.Debugf("Deleting file - %v - from disk", f)
+		if err != nil {
+			log.Error("error uploading file to S3: ", err)
+			continue
+		}
+		successList = append(successList, f)
+	}
+	allSuccess := reflect.DeepEqual(files, successList)
+	if allSuccess {
+		if cloudwatchMetric != "" {
+			err := publishMetric(0, sess)
 			if err != nil {
 				log.Error(err)
 			}
-		} else if err != nil {
-			log.Error(err)
+		}
+	} else {
+		if cloudwatchMetric != "" {
+			err := publishMetric(1, sess)
+			if err != nil {
+				log.Error(err)
+			}
+		}
+	}
+	if deleteFiles && allSuccess {
+		for _, f := range files {
+			err := os.Remove(f)
+			log.Debug("deleting %v from local disk ", f)
+			if err != nil {
+				log.Error(err)
+			}
 		}
 	}
 }
@@ -151,5 +167,23 @@ func uploadToS3(f string, s client.ConfigProvider) (err error) {
 		return err
 	}
 	log.Infof("successfully uploaded %v to %v", f, r.Location)
+	return nil
+}
+
+func publishMetric(r float64, s client.ConfigProvider) error {
+	log.Debugf("publishing cloud watch metric with value: %v", r)
+	svc := cloudwatch.New(s)
+	_, err := svc.PutMetricData(&cloudwatch.PutMetricDataInput{
+		Namespace: aws.String(cloudwatchMetric),
+		MetricData: []*cloudwatch.MetricDatum{
+			{
+				MetricName: aws.String("S3BackupStatus"),
+				Value:      aws.Float64(r),
+			},
+		},
+	})
+	if err != nil {
+		return err
+	}
 	return nil
 }
