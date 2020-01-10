@@ -32,6 +32,8 @@ import (
 )
 
 var (
+	gitCommit     string
+	gitUrl        string
 	filepattern   string
 	loglevel      string
 	backupBucket  string
@@ -68,11 +70,15 @@ func main() {
 	if err != nil {
 		log.Error(err)
 	}
-	log.SetLevel(ll)
 	log.SetFormatter(&log.TextFormatter{
 		DisableLevelTruncation: true,
+		FullTimestamp:          true,
+		TimestampFormat:        "2006-01-02 15:04:05",
 	})
+	log.SetLevel(ll)
 	log.SetOutput(os.Stdout)
+	log.Debugf("Go binary built from commit: %v ", gitCommit)
+	log.Debugf("The source code can be found here: %v ", gitUrl)
 
 	files, err := findFile(filepattern)
 	if err != nil {
@@ -128,7 +134,7 @@ func uploadToS3(f string, s client.ConfigProvider) (err error) {
 	defer file.Close()
 
 	uploader := s3manager.NewUploader(s)
-	log.Debugf("Starting upload of file: ", f)
+	log.Debugf("Starting upload of file: %v", f)
 	r, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(backupBucket),
 		Key:    aws.String(objectPrefix + filepath.Base(f)),
