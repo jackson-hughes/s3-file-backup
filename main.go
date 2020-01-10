@@ -6,11 +6,11 @@ takes input for destination bucket
 uploads file to bucket
 
 nice to haves:
-todo: boolean for delete from disk after backup
+boolean for delete from disk after backup
 todo: compress prior to upload if not already compressed
 todo: publishes metric to cloud watch metrics
 todo: no-op / dry run mode - logs what would have happened
-todo: optionally prefix new s3 objects (e.g. today's date)
+optionally prefix new s3 objects (e.g. today's date)
 flag for profiling
 */
 
@@ -39,6 +39,7 @@ var (
 	backupBucket  string
 	profileMemory bool
 	objectPrefix  string
+	deleteFiles   bool
 )
 
 func main() {
@@ -51,6 +52,7 @@ func main() {
 	flag.StringVar(&objectPrefix, "object-prefix", "", "Prefix for S3 object uploads")
 	flag.StringVar(&objectPrefix, "o", "", "Short flag - prefix for S3 object uploads")
 	flag.BoolVar(&profileMemory, "profile-mem", false, "Enable memory profiling")
+	flag.BoolVar(&deleteFiles, "delete", false, "Delete files from disk after upload")
 	flag.Parse()
 	if flag.NFlag() == 0 {
 		flag.PrintDefaults()
@@ -85,8 +87,7 @@ func main() {
 		log.Error(err)
 	}
 	if files != nil {
-		log.Debug("Found ", len(files), " files that matched provided pattern")
-		log.Debug(files)
+		log.Debug("Found ", len(files), " files that matched provided pattern: ", files)
 	} else {
 		log.Fatalf("No files found matching pattern: %v", filepattern)
 	}
@@ -97,7 +98,13 @@ func main() {
 
 	for _, f := range files {
 		err := uploadToS3(f, sess)
-		if err != nil {
+		if err == nil && deleteFiles {
+			err := os.Remove(f)
+			log.Debugf("Deleting file - %v - from disk", f)
+			if err != nil {
+				log.Error(err)
+			}
+		} else if err != nil {
 			log.Error(err)
 		}
 	}
@@ -134,7 +141,7 @@ func uploadToS3(f string, s client.ConfigProvider) (err error) {
 	defer file.Close()
 
 	uploader := s3manager.NewUploader(s)
-	log.Debugf("Starting upload of file: %v", f)
+	log.Debugf("starting upload of file: %v", f)
 	r, err := uploader.Upload(&s3manager.UploadInput{
 		Bucket: aws.String(backupBucket),
 		Key:    aws.String(objectPrefix + filepath.Base(f)),
@@ -143,6 +150,6 @@ func uploadToS3(f string, s client.ConfigProvider) (err error) {
 	if err != nil {
 		return err
 	}
-	log.Infof("file successfully uploaded to, %s", r.Location)
+	log.Infof("successfully uploaded %v to %v", f, r.Location)
 	return nil
 }
