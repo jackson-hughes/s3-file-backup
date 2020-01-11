@@ -118,7 +118,7 @@ func main() {
 	if deleteFiles && allSuccess {
 		for _, f := range files {
 			err := os.Remove(f)
-			log.Debug("deleting %v from local disk ", f)
+			log.Debugf("deleting %v from local disk ", f)
 			if err != nil {
 				log.Error(err)
 			}
