@@ -17,15 +17,15 @@ The minimum flags required are `-filepath` and `-backup-bucket`.
     
 ### Flags
 
-Flag | Short flag | Description | Default | Required? 
------|------------|-------------|---------|----------
--filepath | -f | Absolute path for file to be uploaded to S3 | nil | Y
--backup-bucket | -b | Name of S3 bucket to upload files to | nil | Y
--log-level | -l | Log level. Options: Trace, Debug, Error or Info | Info | N
--object-prefix | -o | Object prefix for files when uploaded to S3 | nil | N
--profile-mem | N/A | Enable Golang memory profiling | false | N
--delete | N/A | Delete files from local disk after successful upload to S3 | false | N
--cloudwatch-metric | N/A | Publish cloudwatch metric with result of S3 upload (0 or 1) | false | N
+Flag | Short flag | Type | Description | Default | Required? 
+-----|------------|------|-------------|---------|-----------
+-filepath | -f | string | Absolute path for file to be uploaded to S3 | nil | Y
+-backup-bucket | -b | string | Name of S3 bucket to upload files to | nil | Y
+-log-level | -l | string | Log level. Options: Trace, Debug, Error or Info | Info | N
+-object-prefix | -o | string | Object prefix for files when uploaded to S3 | nil | N
+-profile-mem | N/A | bool | Enable Golang memory profiling | false | N
+-delete | N/A | bool | Delete files from local disk after successful upload to S3 | false | N
+-cloudwatch-metric | string | N/A | Publish cloudwatch metric with result of S3 upload (0 or 1) | false | N
 
 ### Globbing
 
