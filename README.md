@@ -1,4 +1,5 @@
-[![Go Report](https://goreportcard.com/badge/github.com/jhughes01/s3-file-backup)](https://goreportcard.com/badge/github.com/jhughes01/s3-file-backup)
+[![Build Status](https://travis-ci.org/jhughes01/s3-file-backup.svg?branch=master)](https://travis-ci.org/jhughes01/s3-file-backup)
+[![Go Report](https://goreportcard.com/badge/github.com/jhughes01/s3-file-backup)](https://goreportcard.com/report/github.com/jhughes01/s3-file-backup)
 
 # s3-file-backup
 
