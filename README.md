@@ -43,3 +43,7 @@ The `-filepath` parameter supports globbing and can be used to return multiple f
     	c           matches character c (c != '\\', '-', ']')
     	'\\' c      matches character c
     	lo '-' hi   matches character c for lo <= c <= hi
+    	
+## Additional nice-to-have features
+- [ ] Compression prior to upload to S3
+- [ ] No-op flag - simulate execution but do nothing
