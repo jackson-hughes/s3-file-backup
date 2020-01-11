@@ -3,6 +3,7 @@
     <words>
       <w>cloudwatch</w>
       <w>filepattern</w>
+      <w>globbing</w>
     </words>
   </dictionary>
 </component>

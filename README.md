@@ -26,3 +26,20 @@ Flag | Short flag | Description | Default | Required?
 -profile-mem | N/A | Enable Golang memory profiling | false | N
 -delete | N/A | Delete files from local disk after successful upload to S3 | false | N
 -cloudwatch-metric | N/A | Publish cloudwatch metric with result of S3 upload (0 or 1) | false | N
+
+### Globbing
+
+The `-filepath` parameter supports globbing and can be used to return multiple files matching a pattern.
+
+    term:
+    	'*'         matches any sequence of non-Separator characters
+    	'?'         matches any single non-Separator character
+    	'[' [ '^' ] { character-range } ']'
+    	            character class (must be non-empty)
+    	c           matches character c (c != '*', '?', '\\', '[')
+    	'\\' c      matches character c
+    
+    character-range:
+    	c           matches character c (c != '\\', '-', ']')
+    	'\\' c      matches character c
+    	lo '-' hi   matches character c for lo <= c <= hi
