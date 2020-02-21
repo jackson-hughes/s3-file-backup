@@ -4,7 +4,7 @@ GIT_COMMIT=$(shell git rev-list -1 HEAD)
 GIT_URL=$(shell git config --get remote.origin.url)
 
 getdeps:
-	go get ./...
+	go get -u -v ./...
 
 build:	getdeps
 	GOARCH=$(GOARCH) GOOS=$(GOOS) go build -ldflags " \

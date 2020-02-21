@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/cloudwatch"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/pkg/profile"
 
@@ -18,15 +17,14 @@ import (
 )
 
 var (
-	gitCommit        string
-	gitUrl           string
-	filepattern      string
-	loglevel         string
-	backupBucket     string
-	objectPrefix     string
-	cloudwatchMetric string
-	profileMemory    bool
-	deleteFiles      bool
+	gitCommit     string
+	gitUrl        string
+	filepattern   string
+	loglevel      string
+	backupBucket  string
+	objectPrefix  string
+	profileMemory bool
+	deleteFiles   bool
 )
 
 func main() {
@@ -40,7 +38,6 @@ func main() {
 	flag.StringVar(&objectPrefix, "o", "", "Short flag - prefix for S3 object uploads")
 	flag.BoolVar(&profileMemory, "profile-mem", false, "Enable memory profiling")
 	flag.BoolVar(&deleteFiles, "delete", false, "Delete files from disk after upload")
-	flag.StringVar(&cloudwatchMetric, "cloudwatch-metric", "", "Cloudwatch metric to publish to")
 	flag.Parse()
 	if flag.NFlag() == 0 {
 		flag.PrintDefaults()
@@ -82,12 +79,6 @@ func main() {
 		log.Debug("Found ", len(files), " files that matched provided pattern: ", files)
 	} else {
 		log.Errorf("No files found matching pattern: %v", filepattern)
-		if cloudwatchMetric != "" {
-			err := publishMetric(1, sess)
-			if err != nil {
-				log.Errorf("error publishing metric: %v", err)
-			}
-		}
 	}
 
 	var successList []string
@@ -101,19 +92,7 @@ func main() {
 	}
 	allSuccess := reflect.DeepEqual(files, successList)
 	if allSuccess {
-		if cloudwatchMetric != "" {
-			err := publishMetric(0, sess)
-			if err != nil {
-				log.Error(err)
-			}
-		}
-	} else {
-		if cloudwatchMetric != "" {
-			err := publishMetric(1, sess)
-			if err != nil {
-				log.Error(err)
-			}
-		}
+		log.Info("all files backed up successfully")
 	}
 	if deleteFiles && allSuccess {
 		for _, f := range files {
@@ -167,23 +146,5 @@ func uploadToS3(f string, s client.ConfigProvider) (err error) {
 		return err
 	}
 	log.Infof("successfully uploaded %v to %v", f, r.Location)
-	return nil
-}
-
-func publishMetric(r float64, s client.ConfigProvider) error {
-	log.Debugf("publishing cloud watch metric with value: %v", r)
-	svc := cloudwatch.New(s)
-	_, err := svc.PutMetricData(&cloudwatch.PutMetricDataInput{
-		Namespace: aws.String(cloudwatchMetric),
-		MetricData: []*cloudwatch.MetricDatum{
-			{
-				MetricName: aws.String("S3BackupStatus"),
-				Value:      aws.Float64(r),
-			},
-		},
-	})
-	if err != nil {
-		return err
-	}
 	return nil
 }
