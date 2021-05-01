@@ -123,7 +123,7 @@ func checkFlags() error {
 func findFile(pattern string) (match []string, err error) {
 	fileMatches, err := filepath.Glob(pattern)
 	if err != nil {
-		return nil, error(err)
+		return nil, err
 	}
 	return fileMatches, nil
 }
